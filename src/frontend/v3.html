@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>On-Call Assistant v3</title>
+  <style>
+    :root { color-scheme: light; font-family: Arial, "Microsoft YaHei", sans-serif; }
+    body { margin: 0; background: #f8f7fb; color: #191f2b; }
+    main { max-width: 980px; margin: 0 auto; padding: 32px 18px; }
+    nav { display: flex; gap: 12px; margin-bottom: 22px; }
+    nav a { color: #62468d; text-decoration: none; font-weight: 700; }
+    h1 { font-size: 28px; margin: 0 0 16px; }
+    form { display: flex; gap: 10px; margin-bottom: 20px; }
+    input { flex: 1; min-width: 0; padding: 11px 12px; border: 1px solid #c9bfd8; border-radius: 6px; font-size: 16px; }
+    button { padding: 0 16px; border: 0; border-radius: 6px; background: #62468d; color: white; font-weight: 700; cursor: pointer; }
+    .turn { background: white; border: 1px solid #ded7e9; border-radius: 6px; padding: 14px; margin: 12px 0; }
+    .question { font-weight: 700; margin-bottom: 10px; }
+    pre { white-space: pre-wrap; line-height: 1.5; margin: 0; }
+    .trace { margin-top: 12px; padding-top: 10px; border-top: 1px solid #eee7f4; color: #555064; font-size: 14px; }
+    .trace code { background: #f2edf8; padding: 2px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <main>
+    <nav><a href="/v1">v1 Keyword</a><a href="/v2">v2 Semantic</a><a href="/v3">v3 Agent</a></nav>
+    <h1>v3 On-Call Assistant</h1>
+    <form id="chat-form">
+      <input id="message" placeholder="Ask about an incident, e.g. 服务 OOM 了怎么办？" autocomplete="off">
+      <button type="submit">Send</button>
+    </form>
+    <section id="conversation" aria-live="polite"></section>
+  </main>
+  <script>
+    const form = document.querySelector("#chat-form");
+    const input = document.querySelector("#message");
+    const conversation = document.querySelector("#conversation");
+
+    function renderTurn(question, payload) {
+      const trace = payload.trace.map((item) =>
+        `<div><code>${item.tool}(${JSON.stringify(item.args)})</code> → ${item.title}, ${item.bytes} bytes</div>`
+      ).join("");
+      conversation.insertAdjacentHTML("afterbegin", `
+        <article class="turn">
+          <div class="question">${question}</div>
+          <pre>${payload.answer}</pre>
+          <div class="trace">${trace}</div>
+        </article>
+      `);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message) return;
+      input.value = "";
+      const response = await fetch("/v3/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+      const payload = await response.json();
+      renderTurn(message, payload);
+    });
+  </script>
+</body>
+</html>
